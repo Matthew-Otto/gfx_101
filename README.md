@@ -1,5 +1,7 @@
-### Dependencies (Arch Linux running KDE Plasma Wayland)
+# gfx_101
 
-sdl3
+Just some really basic 3D graphics code I wrote because I was really bored.
 
-sudo pacman -S sdl3
+### Dependencies:
+
+* sdl3

@@ -28,7 +28,7 @@ bool init(int width, int height) {
     return true;
 }
 
-bool display_update(const uint32_t* framebuffer) {
+bool display_update(const int* framebuffer) {
     // 1. Pump events to keep the OS from marking the window as "Not Responding"
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -38,7 +38,7 @@ bool display_update(const uint32_t* framebuffer) {
     }
 
     // 2. Blast the pixels to the screen
-    SDL_UpdateTexture(texture, NULL, framebuffer, fb_width * sizeof(uint32_t));
+    SDL_UpdateTexture(texture, NULL, framebuffer, fb_width * sizeof(int));
     SDL_RenderClear(renderer);
     SDL_RenderTexture(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
