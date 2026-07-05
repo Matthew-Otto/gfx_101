@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 int* framebuffer;
 int width;
@@ -12,6 +13,7 @@ int *init_fb(int max_width, int max_height) {
 }
 
 void clear_fb() {
+    memset(framebuffer, 0, width * height * sizeof(int));
 }
 
 void set_pixel(int x, int y) {
