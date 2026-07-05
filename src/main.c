@@ -39,9 +39,7 @@ void sphere(coordinate *points) {
         float theta = 0;
         for (int j=0; j <= theta_steps; j++) {
             x = radius * sin(theta) * cos(phi);
-            //y = radius * sin(theta) * sin(phi);
             y = radius * cos(theta);
-            //z = radius * cos(theta) + distance;
             z = radius * sin(theta) * sin(phi);
             points[pt_idx++] = (coordinate){x,y,z};
 
@@ -51,69 +49,74 @@ void sphere(coordinate *points) {
     }
 }
 
-// translates point 3d space
+// rotates a point about the specified origin from -1 to 1 (-360 to 360)
+bool rotate(float x_rot, float y_rot, float z_rot,
+            const coordinate* base, coordinate* rotated) {
+    
+    // Convert rotation float (-1 to 1) to radians (-2PI to 2PI)
+    float rx = x_rot * 2 * PI;
+    float ry = y_rot * 2 * PI;
+    float rz = z_rot * 2 * PI;
+
+    float x = base->x;
+    float y = base->y;
+    float z = base->z;
+
+    // Rotate around X axis
+    if (x_rot != 0) {
+        float temp_y = y * cos(rx) - z * sin(rx);
+        float temp_z = y * sin(rx) + z * cos(rx);
+        y = temp_y;
+        z = temp_z;
+    }
+
+    // Rotate around Y axis
+    if (y_rot != 0) {
+        float temp_x = x * cos(ry) + z * sin(ry);
+        float temp_z = -x * sin(ry) + z * cos(ry);
+        x = temp_x;
+        z = temp_z;
+    }
+
+    // Rotate around Z axis
+    if (z_rot != 0) {
+        float temp_x = x * cos(rz) - y * sin(rz);
+        float temp_y = x * sin(rz) + y * cos(rz);
+        x = temp_x;
+        y = temp_y;
+    }
+
+    rotated->x = x;
+    rotated->y = y;
+    rotated->z = z;
+
+    return true;
+}
+
+// translates point in 3D space
 bool translate(float x, float y, float z, const coordinate* base, coordinate* translated) {
     translated->x = base->x + x;
     translated->y = base->y + y;
     translated->z = base->z + z;
 
-    // bound checking
-    if (translated->z < 0) {
-        translated = NULL;
-        return false;
-    }
+    // bounds checking
+    if (translated->z < 0) return false;
     return true;
 }
 
-// rotates a point about the specified origin from -1 to 1 (-360 to 360)
-bool rotate(float x_orig, float y_orig, float z_orig,
-            float x_rot, float y_rot, float z_rot,
-            const coordinate* base, coordinate* rotated) {
-    
-    rotated->x = base->x;
-    rotated->y = base->y;
-    rotated->z = base->z;
-
-    // find position from origin
-    float x_dist = base->x - x_orig;
-    float y_dist = base->y - y_orig;
-    float z_dist = base->z - z_orig;
-
-    //rotate x
-    if (x_rot != 0) {
-        float theta_x = atan(z_dist / y_dist);
-        float r_x = sqrt(pow(z_dist,2) + pow(y_dist,2));
-        float theta_rot = theta_x + (x_rot * 2 * PI);
-        rotated->y = r_x * sin(theta_rot);
-        rotated->z = r_x * cos(theta_rot);
-    }
-    //rotate y
-    if (y_rot != 0) {
-        float theta_y = atan(x_dist / z_dist);
-        float r_y = sqrt(pow(x_dist,2) + pow(z_dist,2));
-        float theta_rot = theta_y + (y_rot * 2 * PI);
-        rotated->z = r_y * sin(theta_rot);
-        rotated->x = r_y * cos(theta_rot);
-    }
-    //rotate z
-    if (z_rot != 0) {
-        float theta_z = atan(y_dist / x_dist);
-        float r_z = sqrt(pow(y_dist,2) + pow(x_dist,2));
-        float theta_rot = theta_z + (z_rot * 2 * PI);
-        rotated->x = r_z * sin(theta_rot);
-        rotated->y = r_z * cos(theta_rot);
-    }
-
-    return true; // todo out of bounds check
-}
-
 // convert 3d coordinate to 2d x,y projection
-bool project(float dist, float fov, const coordinate* point, projection* proj) {
-    float scale = point->z + dist;
-    if (scale < 0.001) return false;
+bool project(float fov_degrees, const coordinate* point, projection* proj) {  
+    // Prevent division by zero and clipping behind the camera
+    if (point->z < 0.1) return false; 
 
-    proj->x = (point->x * fov) / scale;
-    proj->y = (point->y * fov) / scale;
+    // Convert FOV to radians and calculate the perspective scaling factor
+    float fov_rad = fov_degrees * (PI / 180.0);
+    float fov_scale = 1.0 / tan(fov_rad / 2.0);
+
+    // Apply the true perspective projection
+    proj->x = (point->x * fov_scale) / point->z;
+    proj->y = (point->y * fov_scale) / point->z;
+    
     return true;
 }
 
@@ -144,12 +147,12 @@ int main(void)
 
     bool running = true;
 
-    coordinate origin = {0,0,0};
+    coordinate origin = {0,0,5};
     coordinate rot = {0,0,0};
 
     while (running) {
         clear_fb();
-        float distance = 1;
+        float fov = 30;
 
 
         coordinate translated;
@@ -158,9 +161,9 @@ int main(void)
         pixel pxl;
 
         for (int i = 0; i < 861; i++){
-            if (!rotate(origin.x,origin.y,origin.z, rot.x,rot.y,rot.z, &points[i], &rotated)) continue;
+            if (!rotate(rot.x,rot.y,rot.z, &points[i], &rotated)) continue;
             if (!translate(origin.x,origin.y,origin.z, &rotated, &translated)) continue;
-            if (!project(distance, 1, &translated, &p)) continue;
+            if (!project(fov, &translated, &p)) continue;
             if (!screen(&p, &pxl)) continue;
             set_pixel(pxl.x, pxl.y);
         }
@@ -168,7 +171,9 @@ int main(void)
         // Push pixels to the screen and check if the window was closed
         running = display_update(framebuffer);
 
-        rot.y += 0.001;
+        rot.x -= 0.001;
+        rot.y += 0.002;
+        rot.z += 0.002;
     }
 
     cleanup_fb();
