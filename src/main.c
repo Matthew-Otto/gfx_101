@@ -5,8 +5,8 @@
 #include "render.h"
 #include "framebuffer.h"
 
-#define WIDTH 640
-#define HEIGHT 480
+#define WIDTH 1920 //640
+#define HEIGHT 1080 //480
 const double PI = 3.14159265358979323846;
 
 typedef struct {
@@ -147,12 +147,12 @@ int main(void)
 
     bool running = true;
 
-    coordinate origin = {0,0,5};
+    coordinate origin = {0,0,30};
     coordinate rot = {0,0,0};
 
     while (running) {
         clear_fb();
-        float fov = 30;
+        float fov = 5;
 
 
         coordinate translated;
@@ -171,8 +171,8 @@ int main(void)
         // Push pixels to the screen and check if the window was closed
         running = display_update(framebuffer);
 
-        rot.x -= 0.001;
-        rot.y += 0.002;
+        rot.x -= 0.0005;
+        rot.y -= 0.001;
         rot.z += 0.002;
     }
 
